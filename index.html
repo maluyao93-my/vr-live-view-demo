@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
+<html lang="zh-CN"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>VR 视频直播查看窗口 · 交互演示（鱼眼实拍图 · 双模式）</title>
@@ -14,7 +13,7 @@
     --text-3:#999999;
     --divider:#D8D8D8;
     --font:"Alibaba PuHuiTi 3.0","PingFang SC",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
-    --safe:34px;
+    --safe:28px;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -52,24 +51,29 @@
     background:none;border:0;padding:0;cursor:pointer;color:var(--text);
   }
   .navbar .navicons button:active{opacity:.6}
-  .screen{max-height:680px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .screen{height:704px;display:flex;flex-direction:column;overflow:hidden}
 
-  /* 播放器单元：视频 1:1 + 下方独立控制条（控制条不再覆盖画面） */
-  .pwrap{position:relative;width:100%}
-  .player{position:relative;width:100%;aspect-ratio:1/1;background:#0F0F0F;touch-action:none;cursor:default}
+  /* 播放器单元：黑底全宽，画面为竖屏 9:16 居中（左右留黑边），下方独立控制条 */
+  .pwrap{position:relative;width:100%;flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  .player{
+    position:relative;flex:1 1 auto;min-height:0;background:#000;
+    display:flex;align-items:flex-start;justify-content:center;
+  }
   .mode-vr .player{cursor:grab}
   .mode-vr .player:active{cursor:grabbing}
-  /* 全景模式：鱼眼全画面 1:1 静态展示，不参与环视交互 */
-  .mode-pano .vrui{display:none}
-  .player canvas#view{width:100%;height:100%;display:block}
+  /* 全景模式：鱼眼圆上下顶满视口、左右按 sensor 裁剪，静态展示不交互 */
+  .mode-pano .lstack{display:none}
+  .player canvas#view{
+    flex:0 0 auto;height:100%;width:auto;aspect-ratio:9/16;max-width:100%;display:block;
+  }
 
   /* 播放器叠加层（设计稿真实元素；水印+时间戳内嵌于源图，此处仅叠加网速） */
   .ov{position:absolute;inset:0;pointer-events:none}
   .ov .tr{position:absolute;top:8px;right:10px;color:#FFF;font:400 12px/17px var(--font);text-shadow:0 1px 2px rgba(0,0,0,.6)}
 
-  /* 控制条：独立于视频下方，黑底，5 个功能（录像/截图/声音/清晰度/VR） */
+  /* 控制条：独立于视频下方，黑底，5 个功能（录像/截图/声音/自动/全景） */
   .ctrlbar{
-    height:56px;background:#000;
+    height:48px;background:#000;
     display:flex;align-items:center;justify-content:space-around;gap:2px;
     padding:0 6px;
   }
@@ -79,6 +83,7 @@
     color:#FFF;font-family:var(--font);position:relative;
   }
   .bar-item:active{opacity:.6}
+  .bar-item .bar-txt{font:500 15px/20px var(--font);color:#FFF;white-space:nowrap}
   .bar-item .rec{
     width:28px;height:28px;border-radius:50%;border:2px solid #FFF;
     display:flex;align-items:center;justify-content:center;
@@ -87,13 +92,17 @@
   .bar-item .glyph{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:#FFF}
   .bar-item .glyph svg{display:block;width:28px;height:28px}
 
-  /* VR/全景 切换：跑道圆（胶囊描边）按钮，仅显示当前模式名（黑底上用白描边白字保证对比度） */
+  /* 声音：默认静音；静音态显示带斜线图标，开启态显示声波 */
+  .js-sound[data-muted="true"] .glyph svg.ic-on,
+  .js-sound[data-muted="false"] .glyph svg.ic-off{display:none}
+
+  /* VR/全景 切换：控制条末项纯文字（无边框），仅显示当前模式名（黑底白字保证对比度） */
   .vrpick{position:relative;display:flex;align-items:center;height:100%;flex:1;min-width:0}
   .vrpill{
     display:inline-flex;align-items:center;justify-content:center;gap:2px;
-    height:30px;min-width:60px;padding:0 12px;border-radius:999px;white-space:nowrap;
-    background:transparent;border:1px solid #FFF;border-radius:999px;
-    color:#FFF;font:500 14px/20px var(--font);font-family:var(--font);cursor:pointer;
+    height:32px;min-width:52px;padding:0 10px;white-space:nowrap;
+    background:transparent;border:0;
+    color:#FFF;font:500 15px/20px var(--font);font-family:var(--font);cursor:pointer;
   }
   .vrpill:active{background:rgba(255,255,255,.14)}
   .vrpill .caret{margin-left:2px;opacity:.8}
@@ -133,7 +142,7 @@
     display:flex;flex-direction:column;align-items:flex-start;gap:8px;
   }
   .btn-back{
-    position:absolute;bottom:14px;right:8px;display:inline-flex;align-items:center;justify-content:center;
+    position:absolute;bottom:14px;right:26px;display:inline-flex;align-items:center;justify-content:center;
     background:#FFF;color:var(--brand);border:0;border-radius:999px;
     font:500 14px/20px var(--font);padding:0 14px;height:30px;cursor:pointer;
     visibility:hidden;pointer-events:auto;z-index:3;
@@ -154,21 +163,17 @@
   }
   .hint.hide{opacity:0}
 
-  /* 2×2 功能卡（设计稿） */
-  .fngrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}
+  /* 功能卡：一行 4 个（UI 图「门外-上」） */
+  .fngrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 12px}
   .fncard{
-    height:92px;background:var(--surface);border-radius:12px;border:0;padding:0;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;gap:10px;
-    font:500 15px/21px var(--font);color:var(--text-2);font-family:var(--font);
+    height:72px;background:var(--surface);border-radius:12px;border:0;padding:0;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+    font:400 11px/15px var(--font);color:var(--text-2);font-family:var(--font);white-space:nowrap;
   }
   .fncard:active{opacity:.7}
-  .fncard .glyph{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--text-2)}
+  .fncard .glyph{width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--text-2)}
+  .fncard .glyph svg{display:block;width:24px;height:24px}
 
-  .note{
-    width:336px;max-width:calc(100% - 24px);margin:0 auto;padding:8px 0 0;
-    font:400 11px/15px var(--font);color:var(--text-3);
-  }
-  .note + .note{padding-top:4px}
   .safe{height:var(--safe)}
   .toast{
     position:absolute;left:50%;transform:translateX(-50%) translateY(8px);
@@ -199,8 +204,10 @@
   .land.show .landrow .player{
     align-self:center;justify-self:center;width:auto;max-width:100%;
     height:min(100%, calc((100vw - 92px) * 9 / 16));
-    aspect-ratio:16/9;border-radius:8px 0 0 8px;overflow:hidden;
+    aspect-ratio:16/9;border-radius:8px 0 0 8px;overflow:hidden;padding-top:0;
   }
+  /* 横屏：画面视口与播放器一致（16:9），竖屏的 9:16 居中规则不生效 */
+  .land.show .player canvas#view{width:100%;height:100%;aspect-ratio:auto}
   .land.show .ctrlbar{display:none}
   /* 横屏：画面内左上返回箭头（与水印同行，水印整体右移让位） */
   .land.show .vrui .wm{left:52px}
@@ -303,25 +310,23 @@
     <div class="statusbar">9:41</div>
     <div class="navbar">
       <button class="back" type="button" aria-label="返回">
-        <svg width="24" height="24" viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 3.5 6 10l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg width="24" height="24" viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 3.5 6 10l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
       </button>
       <span class="title">实时视频</span>
       <span class="navicons">
-        <button type="button" id="btnLand" aria-label="横屏观看" title="横屏观看">
-          <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true"><rect x="2.5" y="4.8" width="12.5" height="9.4" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M17.2 8.8v4.6a2.2 2.2 0 0 1-2.2 2.2H7.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        </button>
+        
         <button type="button" aria-label="设置（示意图标）" title="设置" data-demo="设置：非本次需求范围，图标为示意">
-          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M18.30 8.73 L21.47 10.42 A9.60 9.60 0 0 1 21.47 13.58 L18.30 15.27 A7.10 7.10 0 0 1 17.98 15.83 L18.11 19.41 A9.60 9.60 0 0 1 15.36 20.99 L12.32 19.09 A7.10 7.10 0 0 1 11.68 19.09 L8.64 20.99 A9.60 9.60 0 0 1 5.89 19.41 L6.02 15.83 A7.10 7.10 0 0 1 5.70 15.27 L2.53 13.58 A9.60 9.60 0 0 1 2.53 10.42 L5.70 8.73 A7.10 7.10 0 0 1 6.02 8.17 L5.89 4.59 A9.60 9.60 0 0 1 8.64 3.01 L11.68 4.91 A7.10 7.10 0 0 1 12.32 4.91 L15.36 3.01 A9.60 9.60 0 0 1 18.11 4.59 L17.98 8.17 A7.10 7.10 0 0 1 18.30 8.73 Z M12 8.9 A3.1 3.1 0 1 0 12 15.1 A3.1 3.1 0 1 0 12 8.9 Z"/></svg>
+          <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M18.30 8.73 L21.47 10.42 A9.60 9.60 0 0 1 21.47 13.58 L18.30 15.27 A7.10 7.10 0 0 1 17.98 15.83 L18.11 19.41 A9.60 9.60 0 0 1 15.36 20.99 L12.32 19.09 A7.10 7.10 0 0 1 11.68 19.09 L8.64 20.99 A9.60 9.60 0 0 1 5.89 19.41 L6.02 15.83 A7.10 7.10 0 0 1 5.70 15.27 L2.53 13.58 A9.60 9.60 0 0 1 2.53 10.42 L5.70 8.73 A7.10 7.10 0 0 1 6.02 8.17 L5.89 4.59 A9.60 9.60 0 0 1 8.64 3.01 L11.68 4.91 A7.10 7.10 0 0 1 12.32 4.91 L15.36 3.01 A9.60 9.60 0 0 1 18.11 4.59 L17.98 8.17 A7.10 7.10 0 0 1 18.30 8.73 Z M12 8.9 A3.1 3.1 0 1 0 12 15.1 A3.1 3.1 0 1 0 12 8.9 Z"></path></svg>
         </button>
       </span>
     </div>
 
     <div class="screen">
       <!-- 播放器单元：竖屏 = 视频 1:1 + 下方控制条；横屏 = 16:9 + 右侧功能竖条 -->
-      <div class="pwrap mode-vr" id="stage">
+      <div class="pwrap mode-pano" id="stage">
         <div class="landrow">
         <div class="player">
-          <canvas id="view" role="img" aria-label="实时视频画面"></canvas>
+          <canvas id="view" role="img" aria-label="直播画面，模式 VR" width="324" height="576" style="position: relative;"></canvas>
 
           <!-- 叠加层：源图自带 LOCKIN 水印与时间戳，此处仅叠加网速 -->
           <div class="ov" aria-hidden="true">
@@ -332,37 +337,37 @@
           <div class="vrui">
             <div class="wm" aria-hidden="true">
               <div class="wm-brand">LOCKIN</div>
-              <div class="wm-time" id="wmTime">2026.09.22 18:04:36</div>
+              <div class="wm-time" id="wmTime">2026.11.16 18:21:39</div>
             </div>
             <div class="lstack">
               <div class="map" id="mapBox">
-                <canvas id="map" aria-hidden="true"></canvas>
+                <canvas id="map" aria-hidden="true" width="260" height="260"></canvas>
                 <div class="legend"><span><i></i>当前视场</span></div>
               </div>
             </div>
             <button class="btn-back" id="btnBack" type="button">回到全景</button>
-            <div class="hint" id="hint">拖动画面环视 · 单击画面拉近</div>
+            <div class="hint hide" id="hint">拖动画面环视 · 单击画面拉近</div>
           </div>
 
           <!-- 横屏专属：返回箭头 + 左侧功能胶囊（仅横屏层显示） -->
           <button class="land-back" id="btnExitLand" type="button" aria-label="退出横屏">
-            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 3.5 6 10l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 3.5 6 10l6.5 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
           </button>
           <div class="land-pills" role="group" aria-label="快捷功能">
             <button class="land-pill" type="button" data-demo="快速回复（演示）">
-              <svg viewBox="0 0 26 26" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h13A2.5 2.5 0 0 1 22 6.5v8a2.5 2.5 0 0 1-2.5 2.5H12l-5 4.5V17H6.5A2.5 2.5 0 0 1 4 14.5v-8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="9.5" cy="10.5" r="1" fill="currentColor"/><circle cx="13" cy="10.5" r="1" fill="currentColor"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor"/></svg>
+              <svg viewBox="0 0 26 26" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h13A2.5 2.5 0 0 1 22 6.5v8a2.5 2.5 0 0 1-2.5 2.5H12l-5 4.5V17H6.5A2.5 2.5 0 0 1 4 14.5v-8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><circle cx="9.5" cy="10.5" r="1" fill="currentColor"></circle><circle cx="13" cy="10.5" r="1" fill="currentColor"></circle><circle cx="16.5" cy="10.5" r="1" fill="currentColor"></circle></svg>
               快速回复
             </button>
             <button class="land-pill" type="button" data-demo="远程开锁（演示）">
-              <svg viewBox="0 0 26 26" aria-hidden="true"><rect x="8" y="10" width="10" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M11 10V7.5a2.5 2.5 0 0 1 5 0V10" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="15" r="1.4" fill="currentColor"/></svg>
+              <svg viewBox="0 0 26 26" aria-hidden="true"><rect x="8" y="10" width="10" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"></rect><path d="M11 10V7.5a2.5 2.5 0 0 1 5 0V10" fill="none" stroke="currentColor" stroke-width="1.5"></path><circle cx="13" cy="15" r="1.4" fill="currentColor"></circle></svg>
               远程开锁
             </button>
             <button class="land-pill" type="button" data-demo="语音通话（演示）">
-              <svg viewBox="0 0 26 26" aria-hidden="true"><path d="M6 4.5h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.7 2 2 0 0 1 6 4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              <svg viewBox="0 0 26 26" aria-hidden="true"><path d="M6 4.5h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.7 2 2 0 0 1 6 4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path></svg>
               语音通话
             </button>
             <button class="land-pill" type="button" data-demo="一次性密码（演示）">
-              <svg viewBox="0 0 26 26" aria-hidden="true"><g fill="currentColor"><circle cx="6" cy="7" r="1.6"/><circle cx="13" cy="7" r="1.6"/><circle cx="20" cy="7" r="1.6"/><circle cx="6" cy="13" r="1.6"/><circle cx="13" cy="13" r="1.6"/><circle cx="20" cy="13" r="1.6"/><circle cx="6" cy="19" r="1.6"/><circle cx="13" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/></g></svg>
+              <svg viewBox="0 0 26 26" aria-hidden="true"><g fill="currentColor"><circle cx="6" cy="7" r="1.6"></circle><circle cx="13" cy="7" r="1.6"></circle><circle cx="20" cy="7" r="1.6"></circle><circle cx="6" cy="13" r="1.6"></circle><circle cx="13" cy="13" r="1.6"></circle><circle cx="20" cy="13" r="1.6"></circle><circle cx="6" cy="19" r="1.6"></circle><circle cx="13" cy="19" r="1.6"></circle><circle cx="20" cy="19" r="1.6"></circle></g></svg>
               一次性密码
             </button>
           </div>
@@ -374,13 +379,16 @@
             <span class="rec"><i></i></span>
           </button>
           <button class="sbtn" type="button" aria-label="截图" title="截图" data-demo="截图（演示）">
-            <span class="glyph"><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M4 8.5V6a2 2 0 0 1 2-2h2.5M17.5 4H20a2 2 0 0 1 2 2v2.5M22 17.5V20a2 2 0 0 1-2 2h-2.5M8.5 22H6a2 2 0 0 1-2-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="13" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></span>
+            <span class="glyph"><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M4 8.5V6a2 2 0 0 1 2-2h2.5M17.5 4H20a2 2 0 0 1 2 2v2.5M22 17.5V20a2 2 0 0 1-2 2h-2.5M8.5 22H6a2 2 0 0 1-2-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path><circle cx="13" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.7"></circle></svg></span>
           </button>
-          <button class="sbtn" type="button" aria-label="声音" title="声音" data-demo="声音（演示）">
-            <span class="glyph"><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M5 10.5v5h3.6l4.9 4.4V6.1L8.6 10.5H5z" fill="currentColor"/><path d="M16.5 9.8a4.6 4.6 0 0 1 0 6.4M19 7.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+          <button class="sbtn js-sound" type="button" aria-label="声音，当前静音" title="声音（当前静音）" data-muted="true">
+            <span class="glyph">
+              <svg class="ic-off" viewBox="0 0 26 26" aria-hidden="true"><path d="M4.6 10.3h3.5l5.1-4.6v14.6l-5.1-4.6H4.6z" fill="currentColor"></path><path d="M16.7 10.4l4.7 5.2M21.4 10.4l-4.7 5.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+              <svg class="ic-on" viewBox="0 0 26 26" aria-hidden="true"><path d="M4.6 10.3h3.5l5.1-4.6v14.6l-5.1-4.6H4.6z" fill="currentColor"></path><path d="M16.4 9.8a4.9 4.9 0 0 1 0 6.4M19.1 7.4a8.3 8.3 0 0 1 0 11.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+            </span>
           </button>
           <button class="sbtn" type="button" aria-label="清晰度" title="清晰度" data-demo="清晰度（演示）">
-            <span class="glyph"><svg viewBox="0 0 26 26" aria-hidden="true"><rect x="3" y="7" width="20" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="13" y="16.4" text-anchor="middle" font-family="-apple-system,'Helvetica',sans-serif" font-size="8" font-weight="700" fill="currentColor">HD</text></svg></span>
+            <span class="glyph"><svg viewBox="0 0 26 26" aria-hidden="true"><rect x="3" y="7" width="20" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"></rect><text x="13" y="16.4" text-anchor="middle" font-family="-apple-system,'Helvetica',sans-serif" font-size="8" font-weight="700" fill="currentColor">HD</text></svg></span>
           </button>
         </aside>
         </div>
@@ -391,29 +399,32 @@
             <span class="rec"><i></i></span>
           </button>
           <button class="bar-item" type="button" aria-label="截图" title="截图" data-demo="截图（演示）">
-            <span class="glyph"><svg width="28" height="28" viewBox="0 0 26 26" aria-hidden="true"><path d="M4 8.5V6a2 2 0 0 1 2-2h2.5M17.5 4H20a2 2 0 0 1 2 2v2.5M22 17.5V20a2 2 0 0 1-2 2h-2.5M8.5 22H6a2 2 0 0 1-2-2v-2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="13" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></span>
+            <span class="glyph"><svg width="28" height="28" viewBox="0 0 26 26" aria-hidden="true"><rect x="3.5" y="4.5" width="19" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"></rect><circle cx="9" cy="10" r="1.6" fill="currentColor"></circle><path d="M6 19.5l5-5.5 3.5 3.5 3-3.5 3 5.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg></span>
           </button>
-          <button class="bar-item" type="button" aria-label="声音" title="声音" data-demo="声音（演示）">
-            <span class="glyph"><svg width="28" height="28" viewBox="0 0 26 26" aria-hidden="true"><path d="M5 10.5v5h3.6l4.9 4.4V6.1L8.6 10.5H5z" fill="currentColor"/><path d="M16.5 9.8a4.6 4.6 0 0 1 0 6.4M19 7.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+          <button class="bar-item js-sound" type="button" aria-label="声音，当前静音" title="声音（当前静音）" data-muted="true">
+            <span class="glyph" style="position: relative;">
+              <svg class="ic-off" width="28" height="28" viewBox="0 0 26 26" aria-hidden="true"><path d="M4.6 10.3h3.5l5.1-4.6v14.6l-5.1-4.6H4.6z" fill="currentColor"></path><path d="M16.7 10.4l4.7 5.2M21.4 10.4l-4.7 5.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+              <svg class="ic-on" width="28" height="28" viewBox="0 0 26 26" aria-hidden="true"><path d="M4.6 10.3h3.5l5.1-4.6v14.6l-5.1-4.6H4.6z" fill="currentColor"></path><path d="M16.4 9.8a4.9 4.9 0 0 1 0 6.4M19.1 7.4a8.3 8.3 0 0 1 0 11.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+            </span>
           </button>
-          <button class="bar-item" type="button" aria-label="清晰度" title="清晰度" data-demo="清晰度（演示）">
-            <span class="glyph"><svg width="28" height="28" viewBox="0 0 26 26" aria-hidden="true"><rect x="3" y="7" width="20" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="13" y="16.4" text-anchor="middle" font-family="-apple-system,'Helvetica',sans-serif" font-size="8" font-weight="700" fill="currentColor">HD</text></svg></span>
+          <button class="bar-item" type="button" aria-label="清晰度，当前自动" title="清晰度" data-demo="清晰度：自动（演示）">
+            <span class="bar-txt">自动</span>
           </button>
 
           <!-- VR/全景 切换：跑道圆按钮，仅显示当前模式名 -->
           <div class="vrpick">
-            <button class="vrpill" type="button" id="vrEntry" aria-haspopup="true" aria-expanded="false" aria-label="查看模式切换，当前 VR">
-              <span id="vrLabel">VR</span><svg class="caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 6.6 5 4.1l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <button class="vrpill" type="button" id="vrEntry" aria-haspopup="true" aria-expanded="false" aria-label="查看模式切换，当前 全景">
+              <span id="vrLabel">全景</span><svg class="caret" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 6.6 5 4.1l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
             </button>
 
             <!-- 模式切换菜单（两种模式，默认 VR，无说明小字） -->
             <div class="menu" id="modeMenu" role="menu" aria-label="查看模式">
-              <button class="mi" type="button" role="menuitemradio" aria-checked="true" data-mode="vr">
-                <span class="tick"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.4 4.8 8.7 9.5 3.6" fill="none" stroke="#FFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <button class="mi" type="button" role="menuitemradio" aria-checked="false" data-mode="vr">
+                <span class="tick"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.4 4.8 8.7 9.5 3.6" fill="none" stroke="#FFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
                 <span>VR</span>
               </button>
-              <button class="mi" type="button" role="menuitemradio" aria-checked="false" data-mode="pano">
-                <span class="tick"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.4 4.8 8.7 9.5 3.6" fill="none" stroke="#FFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              <button class="mi" type="button" role="menuitemradio" aria-checked="true" data-mode="pano">
+                <span class="tick"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.4 4.8 8.7 9.5 3.6" fill="none" stroke="#FFF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
                 <span>全景</span>
               </button>
             </div>
@@ -424,30 +435,27 @@
       <!-- 功能卡（设计稿 2×2） -->
       <div class="fngrid">
         <button class="fncard" type="button" data-demo="快速回复（演示）">
-          <span class="glyph"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h13A2.5 2.5 0 0 1 22 6.5v8a2.5 2.5 0 0 1-2.5 2.5H12l-5 4.5V17H6.5A2.5 2.5 0 0 1 4 14.5v-8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="9.5" cy="10.5" r="1" fill="currentColor"/><circle cx="13" cy="10.5" r="1" fill="currentColor"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor"/></svg></span>
+          <span class="glyph"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h13A2.5 2.5 0 0 1 22 6.5v8a2.5 2.5 0 0 1-2.5 2.5H12l-5 4.5V17H6.5A2.5 2.5 0 0 1 4 14.5v-8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><circle cx="9.5" cy="10.5" r="1" fill="currentColor"></circle><circle cx="13" cy="10.5" r="1" fill="currentColor"></circle><circle cx="16.5" cy="10.5" r="1" fill="currentColor"></circle></svg></span>
           快速回复
         </button>
         <button class="fncard" type="button" data-demo="远程开锁（演示）">
-          <span class="glyph"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="8" y="10" width="10" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M11 10V7.5a2.5 2.5 0 0 1 5 0V10" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="15" r="1.4" fill="currentColor"/></svg></span>
+          <span class="glyph"><svg viewBox="0 0 26 26" aria-hidden="true"><rect x="8.5" y="3.5" width="9" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"></rect><path d="M11 6.5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path><rect x="11.4" y="10" width="3.2" height="6.5" rx="1.6" fill="currentColor"></rect></svg></span>
           远程开锁
         </button>
         <button class="fncard" type="button" data-demo="语音通话（演示）">
-          <span class="glyph"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M6 4.5h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.7 2 2 0 0 1 6 4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+          <span class="glyph"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M6 4.5h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.7 2 2 0 0 1 6 4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path></svg></span>
           语音通话
         </button>
         <button class="fncard" type="button" data-demo="一次性密码（演示）">
-          <span class="glyph"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><g fill="currentColor"><circle cx="6" cy="7" r="1.6"/><circle cx="13" cy="7" r="1.6"/><circle cx="20" cy="7" r="1.6"/><circle cx="6" cy="13" r="1.6"/><circle cx="13" cy="13" r="1.6"/><circle cx="20" cy="13" r="1.6"/><circle cx="6" cy="19" r="1.6"/><circle cx="13" cy="19" r="1.6"/><circle cx="20" cy="19" r="1.6"/></g></svg></span>
+          <span class="glyph"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><g fill="currentColor"><circle cx="6" cy="7" r="1.6"></circle><circle cx="13" cy="7" r="1.6"></circle><circle cx="20" cy="7" r="1.6"></circle><circle cx="6" cy="13" r="1.6"></circle><circle cx="13" cy="13" r="1.6"></circle><circle cx="20" cy="13" r="1.6"></circle><circle cx="6" cy="19" r="1.6"></circle><circle cx="13" cy="19" r="1.6"></circle><circle cx="20" cy="19" r="1.6"></circle></g></svg></span>
           一次性密码
         </button>
       </div>
 
-      <p class="note">界面结构按「门外-正常状态」设计稿实现；按最新需求：无固定取景，仅 VR / 全景两种模式（默认 VR，点击控制条右侧的跑道圆按钮弹出切换菜单，菜单仅模式名）——VR 为鱼眼重投影的可交互环视（可单击拉近），全景为鱼眼源图 1:1 全画面静态展示；视频窗口 1:1 全宽，控制条（录像/截图/声音/清晰度/VR，黑底，前 4 项纯图标不带文字标签）移至视频下方独立一行，不再遮挡画面；导航栏画面图标为横屏观看入口（Esc 可退出）。渲染源为用户提供的鱼眼实拍图（等距投影采样），LOCKIN 水印与时间戳内嵌于源图。</p>
-      <p class="note">横屏布局按「横屏-实时画面播放-拼接视角」稿实现：画面 16:9 水平居中，左右均留黑边；左侧竖排快捷胶囊（快速回复/远程开锁/语音通话/一次性密码，图标与功能同竖屏 2×2 功能卡，已缩小占比），右侧深色功能竖条 56px（录像/截图/声音/清晰度/VR，图标与功能同竖屏控制条），返回箭头入画面左上，底部控制条横屏时隐藏。</p>
-      <p class="note">模式切换按钮、切换菜单、状态角标、迷你地图为自造元素，尚无对应 MasterGo 组件，需设计师确认后登记；录制、画面、静音及功能卡图标为示意线稿，非最终图标资产。近处视角由鱼眼原图重投影得到，为交互概念演示，非真实空间重建。</p>
-      <div class="safe"></div>
     </div>
 
-    <div class="toast" id="toast"></div>
+      <div class="safe"></div>
+      <div class="toast" id="toast"></div>
   </div>
 
   <!-- ============ 横屏观看层 ============ -->
@@ -463,21 +471,21 @@
 
     <h3>实时状态</h3>
     <div class="card">
-      <div class="row"><span class="k">查看模式</span><span class="v" id="stMode">VR</span></div>
-      <div class="row"><span class="k">水平角度</span><span class="v" id="stYaw">0°</span></div>
-      <div class="row"><span class="k">俯仰角度</span><span class="v" id="stPitch">0°</span></div>
+      <div class="row"><span class="k">查看模式</span><span class="v" id="stMode">全景 · 鱼眼全画面</span></div>
+      <div class="row"><span class="k">水平角度</span><span class="v" id="stYaw">—</span></div>
+      <div class="row"><span class="k">俯仰角度</span><span class="v" id="stPitch">—</span></div>
       <div class="row"><span class="k">近处偏移</span><span class="v" id="stRel">—</span></div>
-      <div class="row"><span class="k">渲染帧率</span><span class="v" id="stFps">— fps</span></div>
+      <div class="row"><span class="k">渲染帧率</span><span class="v" id="stFps">静态</span></div>
     </div>
 
     <h3>模拟手机姿态</h3>
     <div class="field">
       <label for="sYaw"><span>水平（左右环视）</span><b id="vYaw">0°</b></label>
-      <input type="range" id="sYaw" min="-85" max="85" step="1" value="0">
+      <input type="range" id="sYaw" min="-60" max="60" step="1" value="0">
     </div>
     <div class="field">
       <label for="sPitch"><span>俯仰（上下查看）</span><b id="vPitch">0°</b></label>
-      <input type="range" id="sPitch" min="-35" max="20" step="1" value="0">
+      <input type="range" id="sPitch" min="-60" max="60" step="1" value="0">
     </div>
     <div class="field">
       <label for="feFov"><span>鱼眼视场角（校准用）</span><b id="vFov">190°</b></label>
@@ -502,7 +510,7 @@
     <div class="btnline">
       <button class="btn" id="btnDemo" type="button">播放演示脚本</button>
       <button class="btn sec" id="btnReset" type="button">重置视角</button>
-      <button class="btn sec" id="btnCal" type="button" disabled>校准正前方</button>
+      <button class="btn sec" id="btnCal" type="button" disabled="">校准正前方</button>
     </div>
     <div class="checks">
       <label><input type="checkbox" id="chkGyro"> 陀螺仪（仅 VR 模式）</label>
@@ -512,7 +520,7 @@
     <h3>规则提示</h3>
     <ul style="margin:0;padding-left:18px;font:400 13px/18px var(--font);color:var(--text-3)">
       <li>仅两种模式：VR（默认，陀螺仪/拖拽环视、单击可拉近）与全景（鱼眼源图 1:1 全画面静态展示，不环视、不拉近）。</li>
-      <li>鱼眼实拍图覆盖约 190° 视场，水平环视限位 ±85°，超出镜头覆盖范围呈黑色（实机由 AI 细节修复补全）。</li>
+      <li>鱼眼实拍图覆盖约 190° 视场，环视与俯仰限位按镜头有效覆盖自动计算（常规约 ±53°、近处约 ±68°），可上下查看天花板与地面区域，画面始终填满、不露出黑色边界。</li>
       <li>近处视角：观察点前移重投影，视线左右各约 90°（受镜头覆盖收缩），「回到全景」原路拉回。</li>
     </ul>
 
@@ -535,7 +543,7 @@
         </tbody>
       </table>
     </details>
-    <p class="sr" id="live" aria-live="polite"></p>
+    <p class="sr" id="live" aria-live="polite">鱼眼全画面展示</p>
   </aside>
 </div>
 
@@ -565,6 +573,10 @@
     srcW = c.width; srcH = c.height;
     var data = g.getImageData(0, 0, srcW, srcH).data;
     detectCircle(data);
+    /* 涂掉源图自带水印（左上角圆外黑区），演示水印与时间戳改由 HTML 统一叠加 */
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, 320, 52);
+    data = g.getImageData(0, 0, srcW, srcH).data;
     pano = c;
     src32 = new Uint32Array(data.buffer.slice(0));
     S.dirty = true;
@@ -585,13 +597,13 @@
     var scale = (typeof S !== 'undefined' && S.mode === 'pano') ? 1.5 : 0.72;
     var w = Math.round(Math.min(Math.max(rect.width * scale, 320), 900));
     var h = Math.round(w * (rect.height / rect.width));
-    if (w === RW && h === RH) return true;
+    if (w === RW && h === RH) return false;
     RW = w; RH = h;
     view.width = RW; view.height = RH;
     imgData = vctx.createImageData(RW, RH);
     out32 = new Uint32Array(imgData.data.buffer);
     rayKey = '';
-    return true;
+    return true;   /* 画布重建会清空内容，调用方需重绘 */
   }
   function buildRays(fovY){
     var key = RW + 'x' + RH + ':' + fovY.toFixed(2);
@@ -643,12 +655,12 @@
     if (fpsN >= 15){ lastFps = Math.round(1000 / (fpsAcc / fpsN)); fpsAcc = 0; fpsN = 0; }
   }
 
-  /* 全景模式：整张鱼眼源图 1:1 完整展示，不做重投影 */
+  /* 全景模式：鱼眼圆上下顶满视口（直径 = 视口高），左右按 sensor 裁剪，不做重投影 */
   function renderFisheye(){
     vctx.clearRect(0, 0, RW, RH);
     vctx.imageSmoothingEnabled = true; vctx.imageSmoothingQuality = 'high';
-    var d = Math.min(RW, RH), ox = (RW - d) / 2, oy = (RH - d) / 2;
-    vctx.drawImage(pano, 0, 0, srcW, srcH, ox, oy, d, d);
+    var d = RH, ox = (RW - d) / 2;
+    vctx.drawImage(pano, 0, 0, srcW, srcH, ox, 0, d, d);
     lastFps = 0;
   }
 
@@ -666,17 +678,30 @@
   function wrap180(a){ a = (a + 180) % 360; if (a < 0) a += 360; return a - 180; }
   function near(){ return S.zoom > 0.5; }
   function fov(){ return fovPano + (fovNear - fovPano) * S.zoom; }
-  /* 鱼眼覆盖约 ±95°：常规环视 ±85°；近处相对 ±90° 但绝对值不超过 ±88° */
-  function yawLimit(){
-    return near()
-      ? [Math.max(-88, S.nearCenter - 90), Math.min(88, S.nearCenter + 90)]
-      : [-85, 85];
+  /* 鱼眼有效覆盖内、视口四角不越界时允许的最大中心偏角 */
+  function angleBudget(){
+    var tanY = Math.tan(fov() * Math.PI / 360);
+    var aspect = (RW && RH) ? RW / RH : 9 / 16;
+    var corner = Math.atan(Math.sqrt(tanY * tanY * (1 + aspect * aspect))) / DEG;
+    return Math.max(10, (feMax / DEG) - corner - 1);   /* 留 1° 采样余量 */
   }
-  function pitchLimit(){ return near() ? [-30, 20] : [-35, 20]; }
   function setTarget(yaw, pitch){
-    var yl = yawLimit(), pl = pitchLimit();
-    S.tYaw = clamp(yaw, yl[0], yl[1]);
-    S.tPitch = clamp(pitch, pl[0], pl[1]);
+    var b = angleBudget();
+    pitch = clamp(pitch, -b, b);
+    /* 水平与俯仰的合成角超出覆盖时，沿原方位回收到边界，画面始终不出黑边 */
+    var cosA = Math.cos(pitch * DEG) * Math.cos(yaw * DEG);
+    if (cosA < Math.cos(b * DEG)){
+      var cp = Math.cos(pitch * DEG), sp = Math.sin(pitch * DEG);
+      var sa = Math.sqrt(Math.max(1 - cosA * cosA, 1e-8));
+      var k = Math.sin(b * DEG) / sa;
+      pitch = Math.asin(clamp(sp * k, -1, 1)) / DEG;
+      yaw = Math.atan2(cp * Math.sin(yaw * DEG) * k, Math.cos(b * DEG)) / DEG;
+    }
+    if (near()){
+      yaw = clamp(yaw, S.nearCenter - 90, S.nearCenter + 90);
+    }
+    S.tYaw = yaw;
+    S.tPitch = pitch;
     S.dirty = true;
   }
 
@@ -769,7 +794,7 @@
 
   /* ---------- 主循环 ---------- */
   function frame(){
-    sizeCanvas();
+    if (sizeCanvas()) S.dirty = true;   /* 画布尺寸变化后必须重绘，避免画面变空 */
     var moving = false;
     var dy = S.tYaw - S.yaw, dp = S.tPitch - S.pitch, dz = S.tZoom - S.zoom;
     if (Math.abs(dy) > 0.05){ S.yaw += dy * 0.25; moving = true; } else S.yaw = S.tYaw;
@@ -877,6 +902,25 @@
     if (land.classList.contains('show')) exitLand();
   });
 
+  /* ---------- 声音：默认静音，点击切换 ---------- */
+  var soundBtns = document.querySelectorAll('.js-sound');
+  var soundMuted = true;
+  function applySound(){
+    soundBtns.forEach(function(b){
+      b.setAttribute('data-muted', String(soundMuted));
+      b.setAttribute('aria-label', soundMuted ? '声音，当前静音' : '声音，当前开启');
+      b.setAttribute('title', soundMuted ? '声音（当前静音）' : '声音（当前开启）');
+    });
+  }
+  soundBtns.forEach(function(b){
+    b.addEventListener('click', function(){
+      soundMuted = !soundMuted;
+      applySound();
+      toast(soundMuted ? '已静音' : '已开启声音');
+    });
+  });
+  applySound();
+
   /* ---------- 演示控制台通用提示 ---------- */
   document.querySelectorAll('[data-demo]').forEach(function(n){
     n.addEventListener('click', function(){ toast(n.getAttribute('data-demo')); });
@@ -901,9 +945,6 @@
     ctrlbar.appendChild(vrpick);   /* 移回控制条末尾 */
     S.dirty = true;
   }
-  document.getElementById('btnLand').addEventListener('click', function(){
-    if (land.classList.contains('show')) exitLand(); else enterLand();
-  });
   document.getElementById('btnLand2').addEventListener('click', function(){
     if (land.classList.contains('show')) exitLand(); else enterLand();
   });
@@ -1039,5 +1080,6 @@
   setTimeout(function(){ el.hint.classList.add('hide'); }, 5000);
 })();
 </script>
-</body>
-</html>
+
+
+</body></html>
