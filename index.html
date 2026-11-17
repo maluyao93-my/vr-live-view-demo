@@ -520,7 +520,7 @@
     <h3>规则提示</h3>
     <ul style="margin:0;padding-left:18px;font:400 13px/18px var(--font);color:var(--text-3)">
       <li>仅两种模式：VR（默认，陀螺仪/拖拽环视、单击可拉近）与全景（鱼眼源图 1:1 全画面静态展示，不环视、不拉近）。</li>
-      <li>最新全景图为竖屏裁切画面，VR 视场角 90°（横向约 59°），环视与俯仰限位按实际有效画面自动计算，画面始终填满、不露出黑色边界。</li>
+      <li>最新全景图为竖屏裁切画面，环视与俯仰限位按实际有效画面自动计算（常规左右约 ±29°、上下约 ±53°），画面始终填满、不露出黑色边界。</li>
       <li>近处视角：观察点前移重投影，视线范围同样受画面有效覆盖约束，「回到全景」原路拉回。</li>
     </ul>
 
@@ -593,7 +593,7 @@
   var view = document.getElementById('view');
   var vctx = view.getContext('2d');
   var RW = 0, RH = 0, imgData = null, out32 = null, rays = null, rayKey = '';
-  var fovPano = 90, fovNear = 46, dollyMax = 0.55;
+  var fovPano = 74, fovNear = 46, dollyMax = 0.55;
 
   function sizeCanvas(){
     var rect = view.getBoundingClientRect();
